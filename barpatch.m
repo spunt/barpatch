@@ -9,34 +9,32 @@ function h = barpatch(data, varargin)
 % 
 % __________________________________________________________________________
 %  OUTPUT
-% 	h: handles to graphic objects  
+% 	h: handles to all graphics objects  
 % 
 % __________________________________________________________________________
 %  INPUTS
-% 	data:       data matrix to plot; rows are cases, cols are variables  
-% 	varargin:   each are "name, value" pairs
-%       figh        = parent figure for plot
-%       groupidx    = rows index columns of "data" to plot as a group
-%       groupname   = labels for different groups of bars
-%       barname     = labels for different bars within groups (in legend)
-%       grouptick   = flag to place tickmark between groups on x-axis
-%       t           = figure title
-%       xl          = x-axis label
-%       yl          = y-axis label
-%       fontsize    = base font size
-%       fontname    = name of font to use
+% 	data:           data matrix to plot; rows are cases, cols are variables  
+% 	varargin:       each are "name, value" pairs
+%     figh        - parent figure for plot
+%     groupidx    - rows index columns of "data" to plot as a group
+%     groupname   - labels for different groups of bars
+%     barname     - labels for different bars within groups (in legend)
+%     grouptick   - flag to place tickmark between groups on x-axis
+%     t           - figure title
+%     xl          - x-axis label
+%     yl          - y-axis label
+%     fontsize    - base font size
+%     fontname    - name of font to use
 % 
 % __________________________________________________________________________
-%  USAGE EXAMPLE
-% 	data        = randn(10, 8); 
-% 	groupidx    = [1 2; 3 4; 5 6; 7 8]; 
-% 	groupname   = {'Group A' 'Group B' 'Group C' 'Group D'};
-% 	barname     = {'Level 1' 'Level 2'}; 
-% 	xl          = 'X-Axis Label'; 
-% 	yl          = 'Y-Axis Label';
-% 	t           = 'The Figure Title';
-%   figh        = figure('color', 'white'); 
-% 	h = barpatch(data, 'figh', figh, 'groupidx', groupidx, 'groupname', groupname, 'barname', barname, 'xl', xl, 'yl', yl, 't', t); 
+% USAGE EXAMPLE
+%     data        = randn(10, 8); 
+%     groupidx    = [1 2; 3 4; 5 6; 7 8]; 
+%     groupn      = {'Group A' 'Group B' 'Group C' 'Group D'};
+%     xl          = 'X-Axis Label'; 
+%     yl          = 'Y-Axis Label';
+%     t           = 'The Figure Title';
+%     h  = barpatch(data, 'groupidx', groupidx, 'groupname', groupn, 'xl', xl, 'yl', yl, 't', t); 
 % 
 % 
 % ---------------------- Copyright (C) 2014 Bob Spunt ----------------------
@@ -66,18 +64,10 @@ def = { 'figh',         [], ...
         't',            [], ...
         'fontsize',     12, ...
         'fontname',     'Arial'};
-def = reshape(def, 2, length(def)/2)';
-
+    
 % | Check Varargin
 % | ========================================================================
-if ~isempty(varargin)
-    arg = reshape(varargin, 2, length(varargin)/2)';
-    for i = 1:size(arg,1)
-       idx = strncmpi(def(:,1), arg{i,1}, length(arg{i,1})); 
-       if any(idx), def{idx, 2} = arg{i, 2}; end
-    end
-end
-defineargs(def); 
+setdefaults(def, varargin)
 if any(size(groupidx)==1), ngroup = 1; else ngroup = size(groupidx, 1); end
 
 % | Compute means, ses, etc.
@@ -231,6 +221,34 @@ end
 % =========================================================================
 % * SUBFUNCTIONS
 % =========================================================================
-function defineargs(def)
-    for i = 1:size(def,1), assignin('caller', def{i,1}, def{i,2}); end
+function setdefaults(def, args)
+% SETDEFAULTS Set default input arguments
+%
+%  USAGE: setdefaults(def, args)  
+%
+
+% ---------------------- Copyright (C) 2015 Bob Spunt ----------------------
+%	Created:  2015-03-11
+%	Email:    spunt@caltech.edu
+% __________________________________________________________________________
+if nargin < 1, disp('USAGE: setdefaults(def, args)'); return; end
+if nargin < 2, args = []; end
+def = reshape(def, 2, length(def)/2)'; 
+if ~isempty(args)
+    if mod(length(args), 2)
+        error('Optional inputs must be entered as Name-Value pairs, e.g., myfunction(''arg1name'', arg1value, ''arg2name'', arg2value)'); 
+    end
+    arg = reshape(args, 2, length(args)/2)';
+    for i = 1:size(arg,1)
+       idx = strncmpi(def(:,1), arg{i,1}, length(arg{i,1}));
+       if sum(idx) > 1
+           error(['Input name "%s" matches multiple input names. Consider trying one of these:' repmat('  %s', 1, sum(idx))], arg{i,1}, def{idx, 1});
+       elseif ~any(idx)
+           error('Input "%s" matches no input names', arg{i,1});
+       else
+           def{idx,2} = arg{i,2};
+       end  
+    end
+end
+for i = 1:size(def,1), assignin('caller', def{i,1}, def{i,2}); end
 end
