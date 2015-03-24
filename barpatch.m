@@ -67,7 +67,7 @@ def = { 'figh',         [], ...
     
 % | Check Varargin
 % | ========================================================================
-defstruct = setdefaults(def, varargin);
+setdefaults(def, varargin);
 if any(size(groupidx)==1), ngroup = 1; else ngroup = size(groupidx, 1); end
 
 % | Compute means, ses, etc.
