@@ -6,37 +6,36 @@ function h = barpatch(data, varargin)
 % create the bars and LINE to construct the error bars.
 % 
 %  USAGE: h = barpatch(data, varargin)
-% 
 % __________________________________________________________________________
 %  OUTPUT
 % 	h: handles to all graphics objects  
-% 
 % __________________________________________________________________________
 %  INPUTS
-% 	data:           data matrix to plot; rows are cases, cols are variables  
-% 	varargin:       each are "name, value" pairs
-%     figh        - parent figure for plot
-%     groupidx    - rows index columns of "data" to plot as a group
-%     groupname   - labels for different groups of bars
-%     barname     - labels for different bars within groups (in legend)
-%     grouptick   - flag to place tickmark between groups on x-axis
-%     t           - figure title
-%     xl          - x-axis label
-%     yl          - y-axis label
-%     fontsize    - base font size
-%     fontname    - name of font to use
+%   data:           data matrix to plot; rows are cases, cols are variables  
+%   varargin:       optional arguments entered as "name,value" pairs: 
+%       figh        - handle for figure to plot in
+%       groupidx    - rows index columns of "data" to plot as a group
+%       groupname   - labels for different groups of bars
+%       grouptick   - flag to place tickmark between groups on x-axis
+%       barname     - labels for different bars within groups (in legend)
+%       barcmap     - colormap for distinguishing bars within a group
+%       t           - figure title
+%       xl          - x-axis label
+%       yl          - y-axis label
+%       fontsize    - base font size
+%       fontname    - name of font to use
 % 
 % __________________________________________________________________________
 % USAGE EXAMPLE
-%     data        = randn(10, 8); 
-%     groupidx    = [1 2; 3 4; 5 6; 7 8]; 
-%     groupn      = {'Group A' 'Group B' 'Group C' 'Group D'};
-%     xl          = 'X-Axis Label'; 
-%     yl          = 'Y-Axis Label';
-%     t           = 'The Figure Title';
-%     h  = barpatch(data, 'groupidx', groupidx, 'groupname', groupn, 'xl', xl, 'yl', yl, 't', t); 
+%   data        = randn(10, 8); 
+%   groupidx    = [1 2; 3 4; 5 6; 7 8]; 
+%   groupn      = {'Group A' 'Group B' 'Group C' 'Group D'};
+%   xl          = 'X-Axis Label'; 
+%   yl          = 'Y-Axis Label';
+%   t           = 'The Figure Title';
+%   h  = barpatch(data, 'groupidx', groupidx, 'groupname', groupn, 'xl', xl, 'yl', yl, 't', t); 
 % 
-% 
+
 % ---------------------- Copyright (C) 2014 Bob Spunt ----------------------
 % 	Created:  2015-03-09
 % 	Email:    spunt@caltech.edu
@@ -52,22 +51,23 @@ function h = barpatch(data, varargin)
 %       You should have received a copy of the GNU General Public License
 %   along with this program.  If not, see: http://www.gnu.org/licenses/.
 % __________________________________________________________________________
-if nargin < 1, error('USAGE: h = barpatch(data, varargin)'); end
+if nargin < 1, mfile_showhelp; return; end
 nvar = size(data, 2); 
 def = { 'figh',         [], ...
         'groupidx',     1:nvar, ...
         'groupname',    [], ...
         'grouptick',    0, ...
+        'barname',      [], ...
+        'barcmap',      'gray', ...
         'xl',           [], ...
         'yl',           [], ...
-        'barname',      [], ...
         't',            [], ...
         'fontsize',     12, ...
-        'fontname',     'Arial'};
+        'fontname',     'Arial' };
     
 % | Check Varargin
 % | ========================================================================
-setdefaults(def, varargin)
+defstruct = setdefaults(def, varargin);
 if any(size(groupidx)==1), ngroup = 1; else ngroup = size(groupidx, 1); end
 
 % | Compute means, ses, etc.
@@ -76,6 +76,27 @@ nbar        = nvar/ngroup;
 allm        = nanmean(data);
 allse       = nansem(data);
 
+% | Check Validity of Arguments
+% | ========================================================================
+if ~isempty(barname) && length(barname)~=nbar, error('Length of "barname" must match group size'); end
+if ~isempty(groupname) && length(groupname)~=ngroup, error('Length of "groupname" must match number of groups'); end
+if numel(groupidx)~=nvar, error('Number of indices in "groupidx" does not match number of columns in input "data"'); end
+
+% | Check Color Map
+% | ========================================================================
+if ischar(barcmap)
+    map     = quantile(colormap(barcmap), .1:.801/nbar:.90);
+elseif isnumeric(barcmap)
+    mapdim  = size(barcmap);
+    if any([mapdim(1)<nbar mapdim(2)~=3])
+        error('You have specified an invalid colormap in input "barcmap"');
+    end
+    if mapdim(1)>nbar
+        fprintf('\n- WARNING: Using just the first %d rows of the input colormap - \n\n', nbar);  
+    end
+    map = barcmap(1:nbar,:);
+end
+
 % | Make figure
 % | ========================================================================
 if isempty(figh) 
@@ -83,7 +104,6 @@ if isempty(figh)
 else
     h.fig = figh; 
 end
-map     = quantile(colormap('gray'), .1:.801/nbar:.90); % colormap
 h.ax = gca; 
 if length(findall(h.fig, 'type', 'axes'))==1
     set(h.ax, 'position', [.075 .125 .875 .825]);
@@ -221,34 +241,55 @@ end
 % =========================================================================
 % * SUBFUNCTIONS
 % =========================================================================
-function setdefaults(def, args)
-% SETDEFAULTS Set default input arguments
+function defstruct = setdefaults(def, args)
+% SETDEFAULTS Name/value parsing of varargin with default values
 %
-%  USAGE: setdefaults(def, args)  
+%  USAGE: defstruct = setdefaults(def, args)  
+% __________________________________________________________________________
+%  OUTPUT
+% 	defstruct: structure containing the final settingss
+% __________________________________________________________________________
+%  INPUTS
+% 	def:       cell array containing "name, value" pairs for all varargins
+% 	args:      the argument array to parse (i.e., varargin)
+% __________________________________________________________________________
+%  USAGE EXAMPLE (WITHIN FUNCTION)
+%     defaults    = {   'arg1',     0,      ...
+%                       'arg2',     'zero', ...    
+%                       'arg3',     rand    ...
+%                   };
+%     defstruct   = setdefaults(defaults, varargin);
 %
 
 % ---------------------- Copyright (C) 2015 Bob Spunt ----------------------
 %	Created:  2015-03-11
 %	Email:    spunt@caltech.edu
 % __________________________________________________________________________
-if nargin < 1, disp('USAGE: setdefaults(def, args)'); return; end
+if nargin < 1, disp('USAGE: defstruct = setdefaults(def, args)'); return; end
 if nargin < 2, args = []; end
 def = reshape(def, 2, length(def)/2)'; 
 if ~isempty(args)
     if mod(length(args), 2)
-        error('Optional inputs must be entered as Name-Value pairs, e.g., myfunction(''arg1name'', arg1value, ''arg2name'', arg2value)'); 
+        error('Optional inputs must be entered as Name, Value pairs, e.g., myfunction(''name'', value)'); 
     end
     arg = reshape(args, 2, length(args)/2)';
     for i = 1:size(arg,1)
        idx = strncmpi(def(:,1), arg{i,1}, length(arg{i,1}));
        if sum(idx) > 1
-           error(['Input name "%s" matches multiple input names. Consider trying one of these:' repmat('  %s', 1, sum(idx))], arg{i,1}, def{idx, 1});
+           error(['Input "%s" matches multiple valid inputs:' repmat('  %s', 1, sum(idx))], arg{i,1}, def{idx, 1});
        elseif ~any(idx)
-           error('Input "%s" matches no input names', arg{i,1});
+           error('Input "%s" does not match a valid input.', arg{i,1});
        else
            def{idx,2} = arg{i,2};
        end  
     end
 end
 for i = 1:size(def,1), assignin('caller', def{i,1}, def{i,2}); end
+if nargout>0, defstruct = cell2struct(def(:,2), def(:,1)); end
+end
+function mfile_showhelp(varargin)
+% MFILE_SHOWHELP
+ST = dbstack('-completenames');
+if isempty(ST), fprintf('\nYou must call this within a function\n\n'); return; end
+eval(sprintf('help %s', ST(2).file));  
 end
