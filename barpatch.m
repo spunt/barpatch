@@ -12,13 +12,16 @@ function h = barpatch(data, varargin)
 % __________________________________________________________________________
 %  INPUTS
 %   data:           data matrix to plot; rows are cases, cols are variables  
-%   varargin:       optional arguments entered as "name,value" pairs: 
+%   varargin:       optional arguments entered as "name,value" pairs:
+%                   NOTE: To see defaults, run barpatch without any arguments
 %       figh        - handle for figure to plot in
 %       groupidx    - rows index columns of "data" to plot as a group
 %       groupname   - labels for different groups of bars
 %       grouptick   - flag to place tickmark between groups on x-axis
 %       barname     - labels for different bars within groups (in legend)
 %       barcmap     - colormap for distinguishing bars within a group
+%       barwidth,   - width of bars (>1 produces overlapping bars)
+%       errlinewidth- width of error bar lines
 %       t           - figure title
 %       xl          - x-axis label
 %       yl          - y-axis label
@@ -51,11 +54,9 @@ function h = barpatch(data, varargin)
 %       You should have received a copy of the GNU General Public License
 %   along with this program.  If not, see: http://www.gnu.org/licenses/.
 % __________________________________________________________________________
-if nargin < 1, mfile_showhelp; return; end
-nvar = size(data, 2); 
 def = { ...
     'figh',         [],     ...
-    'groupidx',     1:nvar, ...
+    'groupidx',     [], ...
     'groupname',    [],     ...
     'grouptick',    0,      ...
     'barname',      [],     ...
@@ -71,11 +72,15 @@ def = { ...
     
 % | Check Varargin
 % | ========================================================================
-setdefaults(def, varargin);
+vals = setargs(def, varargin);
+if nargin<1, mfile_showhelp; fprintf('\t| - VARARGIN DEFAULTS - |\n'); disp(vals); return; end
+nvar = size(data, 2); 
+if isempty(groupidx), groupidx = 1:nvar; end
 if any(size(groupidx)==1), ngroup = 1; else ngroup = size(groupidx, 1); end
 
 % | Compute means, ses, etc.
 % | ========================================================================
+
 nbar        = nvar/ngroup;
 allm        = nanmean(data);
 allse       = nansem(data);
@@ -245,54 +250,78 @@ set(findall(h.fig, '-property', 'units'), 'units', 'norm');
 set(h.fig, 'visible', 'on');
 
 end
-% =========================================================================
-% * SUBFUNCTIONS
-% =========================================================================
-function defstruct = setdefaults(def, args)
-% SETDEFAULTS Name/value parsing of varargin with default values
+% ==========================================================================
 %
-%  USAGE: defstruct = setdefaults(def, args)  
+% ------------------------------ SUBFUNCTIONS ------------------------------
+%
+% ==========================================================================
+function argstruct = setargs(defaults, optargs)
+% SETARGS Name/value parsing and assignment of varargin with default values
+% 
+% This is a utility for setting the value of optional arguments to a
+% function. The first argument is required and should be a cell array of
+% "name, default value" pairs for all optional arguments. The second
+% argument is optional and should be a cell array of "name, custom value"
+% pairs for at least one of the optional arguments.
+% 
+%  USAGE: argstruct = setargs(defaults, args)  
 % __________________________________________________________________________
 %  OUTPUT
-% 	defstruct: structure containing the final settingss
+% 
+% 	argstruct: structure containing the final argument values
 % __________________________________________________________________________
 %  INPUTS
-% 	def:       cell array containing "name, value" pairs for all varargins
-% 	args:      the argument array to parse (i.e., varargin)
+% 
+% 	defaults:  
+%       cell array of "name, default value" pairs for all optional arguments
+% 
+% 	optargs [optional]     
+%       cell array of "name, custom value" pairs for at least one of the
+%       optional arguments. this will typically be the "varargin" array. 
 % __________________________________________________________________________
 %  USAGE EXAMPLE (WITHIN FUNCTION)
-%     defaults    = {   'arg1',     0,      ...
-%                       'arg2',     'zero', ...    
-%                       'arg3',     rand    ...
-%                   };
-%     defstruct   = setdefaults(defaults, varargin);
+% 
+%     defaults    = {'arg1', 0, 'arg2', 'words', 'arg3', rand}; 
+%     argstruct   = setargs(defaults, varargin)
 %
+
 
 % ---------------------- Copyright (C) 2015 Bob Spunt ----------------------
 %	Created:  2015-03-11
 %	Email:    spunt@caltech.edu
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or (at
+%   your option) any later version.
+%       This program is distributed in the hope that it will be useful, but
+%   WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+%   General Public License for more details.
+%       You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see: http://www.gnu.org/licenses/.
 % __________________________________________________________________________
-if nargin < 1, disp('USAGE: defstruct = setdefaults(def, args)'); return; end
-if nargin < 2, args = []; end
-def = reshape(def, 2, length(def)/2)'; 
-if ~isempty(args)
-    if mod(length(args), 2)
+if nargin < 1, mfile_showhelp; return; end
+if nargin < 2, optargs = []; end
+defaults = reshape(defaults, 2, length(defaults)/2)'; 
+if ~isempty(optargs)
+    if mod(length(optargs), 2)
         error('Optional inputs must be entered as Name, Value pairs, e.g., myfunction(''name'', value)'); 
     end
-    arg = reshape(args, 2, length(args)/2)';
+    arg = reshape(optargs, 2, length(optargs)/2)';
     for i = 1:size(arg,1)
-       idx = strncmpi(def(:,1), arg{i,1}, length(arg{i,1}));
+       idx = strncmpi(defaults(:,1), arg{i,1}, length(arg{i,1}));
        if sum(idx) > 1
-           error(['Input "%s" matches multiple valid inputs:' repmat('  %s', 1, sum(idx))], arg{i,1}, def{idx, 1});
+           error(['Input "%s" matches multiple valid inputs:' repmat('  %s', 1, sum(idx))], arg{i,1}, defaults{idx, 1});
        elseif ~any(idx)
            error('Input "%s" does not match a valid input.', arg{i,1});
        else
-           def{idx,2} = arg{i,2};
+           defaults{idx,2} = arg{i,2};
        end  
     end
 end
-for i = 1:size(def,1), assignin('caller', def{i,1}, def{i,2}); end
-if nargout>0, defstruct = cell2struct(def(:,2), def(:,1)); end
+for i = 1:size(defaults,1), assignin('caller', defaults{i,1}, defaults{i,2}); end
+if nargout>0, argstruct = cell2struct(defaults(:,2), defaults(:,1)); end
 end
 function mfile_showhelp(varargin)
 % MFILE_SHOWHELP
