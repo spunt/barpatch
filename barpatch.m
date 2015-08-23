@@ -129,7 +129,6 @@ h.patch     = zeros(ngroup, nbar);
 h.error     = zeros(ngroup, nbar);
 h.cap       = zeros(ngroup, nbar);
 xcenter     = .25+.5:1:nbar;
-
 if ngroup > 1
     xcenter = repmat(xcenter, ngroup, 1);
     gwidth  = repmat(nbar+.5, ngroup, 1); 
@@ -204,11 +203,13 @@ end
 % | ========================================================================
 if ~isempty(groupname)
     h.grouplabel       = zeros(ngroup);
+    barlim = cell2mat(get(h.patch, 'ydata'));
     errlim = cell2mat(get(h.error, 'ydata'));
-    errlim = [min(errlim(:)) max(errlim(:))];
+    alllim = [barlim(:); errlim(:)];
+    alllim = [min(alllim(:)) max(alllim(:))];
     for g = 1:ngroup
-        h.grouplabel(g) = text(0, errlim(1), groupname{g}, 'margin', 1, 'horizontalalign', 'center', 'FontSize', ceil(propfs*fontmultiplier1));
-        set(h.grouplabel(g), 'position', [gcenter(g,1) errlim(1)], 'verticalalign', 'top', 'tag', 'groupname');
+        h.grouplabel(g) = text(0, alllim(1), groupname{g}, 'margin', 1, 'horizontalalign', 'center', 'FontSize', ceil(propfs*fontmultiplier1));
+        set(h.grouplabel(g), 'position', [gcenter(g,1) alllim(1)], 'verticalalign', 'top', 'tag', 'groupname');
     end
     ext = get(h.grouplabel(1), 'extent');
     ylim = get(h.ax, 'ylim');
@@ -242,11 +243,12 @@ end
 
 % | TITLE
 % | ========================================================================
-if ~isempty(t)
-    
+if ~isempty(t) 
+    barlim = cell2mat(get(h.patch, 'ydata'));
     errlim = cell2mat(get(h.error, 'ydata'));
-    errlim = [min(errlim(:)) max(errlim(:))];
-    h.title    = text(fcenter, errlim(2), t, ...
+    alllim = [barlim(:); errlim(:)];
+    alllim = [min(alllim(:)) max(alllim(:))];
+    h.title    = text(fcenter, alllim(2), t, ...
         'margin', 1, ...
         'FontSize', ceil(propfs*fontmultiplier3), ...
         'horizontalalign', 'center', ...
@@ -257,12 +259,11 @@ if ~isempty(t)
     ylim    = get(h.ax, 'ylim');
     ylim(2) = sum(ext([2 4])); 
     set(h.ax, 'ylim', ylim);
-%     h.title = title(t, 'FontSize', ceil(propfs*fontmultiplier3), 'FontWeight', 'normal');
 end
 
 % | FORMAT TICKLABELS
 % | ========================================================================
-if ~isempty(ytickformat)
+if and(~isempty(ytickformat), ~isempty(get(h.ax, 'yticklabel')))
     yt = get(h.ax, 'yticklabel');
     yts = yt; 
     yt = cellfun(@str2num, yt);
