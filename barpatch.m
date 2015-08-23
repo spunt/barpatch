@@ -55,19 +55,24 @@ function h = barpatch(data, varargin)
 %   along with this program.  If not, see: http://www.gnu.org/licenses/.
 % __________________________________________________________________________
 def = { ...
-    'figh',         [],     ...
-    'groupidx',     [], ...
-    'groupname',    [],     ...
-    'grouptick',    0,      ...
-    'barname',      [],     ...
-    'barcmap',      'gray', ...
-    'barwidth',     .95,    ...
-    'errlinewidth', 1.5,    ...
-    'xl',           [],     ...
-    'yl',           [],     ...
-    't',            [],     ...
-    'fontsize',     12,     ...
-    'fontname',     'Arial' ...
+    'newfig',           1,                  ...
+    'groupidx',         [],                 ...
+    'groupname',        [],                 ...
+    'grouptick',        0,                  ...
+    'barname',          [],                 ...
+    'barcmap',          'gray',             ...
+    'barwidth',         .95,                ...
+    'errlinewidth',     1.5,                ...
+    'xl',               [],                 ...
+    'yl',               [],                 ...
+    't',                [],                 ...
+    'fontunits',        'norm',             ...
+    'fontsize',         12,                 ...
+    'fontmultiplier1',  1.2,                ...
+    'fontmultiplier2',  1.4,                ...
+    'fontmultiplier3',  1.6,                ...
+    'fontname',         'Fixed-Width',      ...
+    'ytickformat',      '%.2f',             ...
      };
     
 % | Check Varargin
@@ -80,7 +85,6 @@ if any(size(groupidx)==1), ngroup = 1; else ngroup = size(groupidx, 1); end
 
 % | Compute means, ses, etc.
 % | ========================================================================
-
 nbar        = nvar/ngroup;
 allm        = nanmean(data);
 allse       = nansem(data);
@@ -88,7 +92,8 @@ allse       = nansem(data);
 % | Check Validity of Arguments
 % | ========================================================================
 if ~isempty(barname) && length(barname)~=nbar, error('Length of "barname" must match group size'); end
-if ~isempty(groupname) && length(groupname)~=ngroup, error('Length of "groupname" must match number of groups'); end
+if and(~isempty(groupname), ischar(groupname)), groupname = cellstr(groupname); end
+if and(~isempty(groupname), length(groupname)~=ngroup), error('Length of "groupname" must match number of groups'); end
 if numel(groupidx)~=nvar, error('Number of indices in "groupidx" does not match number of columns in input "data"'); end
 
 % | Check Color Map
@@ -106,35 +111,43 @@ elseif isnumeric(barcmap)
     map = barcmap(1:nbar,:);
 end
 
-% | Make figure
+% | Grab or Make Figure
 % | ========================================================================
-if isempty(figh) 
-    h.fig = figure('color','white'); 
-else
-    h.fig = figh; 
-end
-h.ax = gca; 
-if length(findall(h.fig, 'type', 'axes'))==1
+if newfig
+    h.fig   = figure('color','white');
+    h.ax    = gca;
     set(h.ax, 'position', [.075 .125 .875 .825]);
+else
+    h.fig   = gcf;
+    h.ax    = gca; 
 end
+set(findall(h.fig, '-property', 'units'), 'units', 'norm');
 set(h.ax, 'FontSize', fontsize); % base font size
-propfs      = round(get(h.ax, 'FontSize')*1.20); % font size proportioned wrt to axis fontsize
+propfs      = round(get(h.ax, 'FontSize')*fontmultiplier1); % font size proportioned wrt to axis fontsize
 set(gca, 'xticklabel', []); 
 h.patch     = zeros(ngroup, nbar); 
 h.error     = zeros(ngroup, nbar);
 h.cap       = zeros(ngroup, nbar);
 xcenter     = .25+.5:1:nbar;
+
 if ngroup > 1
     xcenter = repmat(xcenter, ngroup, 1);
     gwidth  = repmat(nbar+.5, ngroup, 1); 
     xcenter(2:end,:) = xcenter(2:end,:) + repmat(cumsum(gwidth(2:end)), 1, nbar);
-    tickcenter = xcenter(:,end) + .50 + .25; 
+    tickcenter = xcenter(:,end) + .50 + .25;
+    gcenter     = sum(xcenter, 2)/2;
+    fcenter     = sum(gcenter)/ngroup; 
+else
+    gcenter = sum(xcenter)/nbar;
+    fcenter = sum(xcenter)/nbar;
 end
-halfbar = barwidth/2; 
-xc = [xcenter-halfbar xcenter+halfbar xcenter+halfbar xcenter-halfbar];  
+
+halfbar     = barwidth/2; 
+xc          = [xcenter-halfbar xcenter+halfbar xcenter+halfbar xcenter-halfbar];
 for g = 1:ngroup 
     m = allm(groupidx(g,:)); 
     se = allse(groupidx(g,:));
+
     for i = 1:nbar
         xcoord  = xc(g,i:nbar:end); 
         ycoord  = [0 0 m(i) m(i)];
@@ -166,7 +179,7 @@ if ~isempty(barname)
     set(h.leg, ...
         'Location', 'Best', ...
         'FontWeight', 'normal', ...
-        'FontSize', ceil(propfs*1.20), ...
+        'FontSize', ceil(propfs*fontmultiplier1), ...
         'EdgeColor', get(gca, 'color'));
     hold on
 end
@@ -179,7 +192,7 @@ set(h.ax, 'xcolor', get(gca, 'color'));
 
 % | GROUP DIVING TICK MARK
 % | ========================================================================
-if ngroup > 1 & grouptick
+if and(ngroup>1, grouptick)
    tln = .025*range(get(h.ax, 'ylim'));
    for g = 1:ngroup-1
       h.xtick(g) = line([tickcenter(g) tickcenter(g)], [-tln tln]);  
@@ -191,64 +204,79 @@ end
 % | ========================================================================
 if ~isempty(groupname)
     h.grouplabel       = zeros(ngroup);
-    ylim = get(h.ax, 'ylim'); 
+    errlim = cell2mat(get(h.error, 'ydata'));
+    errlim = [min(errlim(:)) max(errlim(:))];
     for g = 1:ngroup
-        h.grouplabel(g) = text(0, ylim(1), groupname{g}, 'margin', 1, 'horizontalalign', 'left', 'FontSize', ceil(propfs*1.2));
-        strext = get(h.grouplabel(g), 'extent');
-        stradj = (nbar - strext(3))/2; 
-        set(h.grouplabel(g), 'position', [xcenter(g,1)+stradj-.5 ylim(1)], 'verticalalign', 'top');  
+        h.grouplabel(g) = text(0, errlim(1), groupname{g}, 'margin', 1, 'horizontalalign', 'center', 'FontSize', ceil(propfs*fontmultiplier1));
+        set(h.grouplabel(g), 'position', [gcenter(g,1) errlim(1)], 'verticalalign', 'top', 'tag', 'groupname');
     end
+    ext = get(h.grouplabel(1), 'extent');
+    ylim = get(h.ax, 'ylim');
+    ylim(1) = ext(2);
+    set(h.ax, 'ylim', ylim);
 end
 
 % | X-LABEL
 % | ========================================================================
 if ~isempty(xl)
-    ylim = get(h.ax, 'ylim'); 
-    h.xlabel = xlabel(xl, 'FontSize', ceil(propfs*1.2), 'FontWeight', 'normal');
-    xpos = get(h.xlabel, 'pos'); 
-    xpos(2) = ylim(1)-(.10*range(ylim)); 
-    set(h.xlabel, 'pos', xpos); 
+    ylim        = get(h.ax, 'ylim');
+    if ~isempty(groupname), ylim(1) = ylim(1) - (range(ylim)*.05); end
+    h.xlabel    = text(fcenter, ylim(1), xl, ...
+        'margin', 1, ...
+        'FontSize', ceil(propfs*fontmultiplier2), ...
+        'horizontalalign', 'center', ...
+        'verticalalign', 'top', ...
+        'tag', 'xlabel' ...
+    );
+    ext = get(h.xlabel, 'extent');
+    ylim = get(h.ax, 'ylim');
+    ylim(1) = ext(2);
+    set(h.ax, 'ylim', ylim);
 end
    
 % | Y-LABEL
 % | ========================================================================
 if ~isempty(yl)
-    h.ylabel = ylabel(yl, 'FontSize', ceil(propfs*1.2), 'FontWeight', 'normal'); 
+    h.ylabel = ylabel(yl, 'FontSize', ceil(propfs*fontmultiplier1), 'FontWeight', 'normal'); 
 end
 
 % | TITLE
 % | ========================================================================
 if ~isempty(t)
-    h.title = title(t, 'FontSize', ceil(propfs*1.5), 'FontWeight', 'normal');
+    
+    errlim = cell2mat(get(h.error, 'ydata'));
+    errlim = [min(errlim(:)) max(errlim(:))];
+    h.title    = text(fcenter, errlim(2), t, ...
+        'margin', 1, ...
+        'FontSize', ceil(propfs*fontmultiplier3), ...
+        'horizontalalign', 'center', ...
+        'verticalalign', 'bottom', ...
+        'tag', 'title' ...
+    );
+    ext     = get(h.title(1), 'extent');
+    ylim    = get(h.ax, 'ylim');
+    ylim(2) = sum(ext([2 4])); 
+    set(h.ax, 'ylim', ylim);
+%     h.title = title(t, 'FontSize', ceil(propfs*fontmultiplier3), 'FontWeight', 'normal');
+end
+
+% | FORMAT TICKLABELS
+% | ========================================================================
+if ~isempty(ytickformat)
+    yt = get(h.ax, 'yticklabel');
+    yts = yt; 
+    yt = cellfun(@str2num, yt);
+    for i = 1:length(yt)
+       yts{i} = sprintf(ytickformat, yt(i));
+    end
+    set(h.ax, 'yticklabel', yts);
 end
 
 % | FINAL CLEANUP, PROPERTY SETTING
 % | ========================================================================
-set(findall(h.fig, '-property', 'FontName'), 'FontName', fontname); 
-set(findall(h.fig, '-property', 'units'), 'units', 'pixels');
-ae = get(h.ax, 'position');
-oe = get(h.ax, 'outerposition');
-ae(1:2) = abs(ae(1:2)-oe(1:2))*1.5; 
-if isfield(h, 'xlabel')
-    xe      = get(h.xlabel, 'extent');
-    ae(2)   = ceil(abs(xe(2))*1.25);
-elseif isfield(h, 'grouplabel')
-    xe      = get(h.grouplabel(1), 'extent');
-    ae(2)   = ceil(abs(xe(2))*1.25);
-end
-if isfield(h, 'ylabel');
-    ye      = get(h.ylabel, 'extent');
-    ae(1)   = ceil(abs(ye(1))*1.25); 
-end
-set(h.ax, 'position', ae);
-oe = get(h.ax, 'outerposition'); 
-fe = get(h.fig, 'position');
-fe(3) = sum(oe([1 3]))*1.01;
-fe(4) = sum(oe([2 4]))*1.01; 
-set(h.fig, 'pos', fe); 
-set(findall(h.fig, '-property', 'units'), 'units', 'norm'); 
-set(h.fig, 'visible', 'on');
-
+set(findall(h.fig, '-property', 'FontName'), 'FontName', fontname, 'FontUnits', 'norm'); 
+set(findall(h.fig, '-property', 'units'), 'units', fontunits);
+if newfig, set(h.ax, 'OuterPosition', [0 0 1 1]); end
 end
 % ==========================================================================
 %
