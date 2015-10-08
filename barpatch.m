@@ -27,6 +27,8 @@ function h = barpatch(data, varargin)
 %       yl          - y-axis label
 %       fontsize    - base font size
 %       fontname    - name of font to use
+%       ytickformat - display formatting for yticklabels (e.g., '%.2f')
+%       yticklength - # of yticks (if empty, determined automatically)
 % 
 % __________________________________________________________________________
 % USAGE EXAMPLE
@@ -71,8 +73,9 @@ def = { ...
     'fontmultiplier1',  1.2,                ...
     'fontmultiplier2',  1.4,                ...
     'fontmultiplier3',  1.6,                ...
-    'fontname',         'Arial',      ...
+    'fontname',         'Arial',            ...
     'ytickformat',      '%.2f',             ...
+    'yticklength',      []                  ...
      };
     
 % | Check Varargin
@@ -257,13 +260,16 @@ if ~isempty(t)
     );
     ext     = get(h.title(1), 'extent');
     ylim    = get(h.ax, 'ylim');
-    
     ylim(2) = sum(ext([2 4])); 
     set(h.ax, 'ylim', ylim);
 end
 
 % | FORMAT TICKLABELS
 % | ========================================================================
+if yticklength
+    ylim    = get(h.ax, 'ylim');
+    set(h.ax, 'ytick', linspace(ylim(1), ylim(2), yticklength));
+end
 if and(~isempty(ytickformat), ~isempty(get(h.ax, 'yticklabel')))
     yt = get(h.ax, 'yticklabel');
     yts = yt; 
@@ -279,6 +285,7 @@ end
 set(findall(h.fig, '-property', 'FontName'), 'FontName', fontname, 'FontUnits', 'norm'); 
 set(findall(h.fig, '-property', 'units'), 'units', fontunits);
 if newfig, set(h.ax, 'OuterPosition', [0 0 1 1]); end
+
 end
 % ==========================================================================
 %
