@@ -271,14 +271,14 @@ if yticklength
     set(h.ax, 'ytick', linspace(ylim(1), ylim(2), yticklength));
 end
 if and(~isempty(ytickformat), ~isempty(get(h.ax, 'yticklabel')))
-    yt = get(h.ax, 'yticklabel');
-    yts = yt; 
-    yt = cellfun(@str2num, yt);
+    yt  = get(h.ax, 'ytick');
+    yts = cell(size(yt)); 
     for i = 1:length(yt)
        yts{i} = sprintf(ytickformat, yt(i));
     end
     set(h.ax, 'yticklabel', yts);
 end
+
 
 % | FINAL CLEANUP, PROPERTY SETTING
 % | ========================================================================
