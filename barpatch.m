@@ -99,6 +99,21 @@ if and(~isempty(groupname), ischar(groupname)), groupname = cellstr(groupname); 
 if and(~isempty(groupname), length(groupname)~=ngroup), error('Length of "groupname" must match number of groups'); end
 if numel(groupidx)~=nvar, error('Number of indices in "groupidx" does not match number of columns in input "data"'); end
 
+% | Grab or Make Figure
+% | ========================================================================
+if newfig
+    h.fig   = figure('color','white');
+    h.ax    = gca;
+    set(h.ax, 'position', [.075 .125 .875 .825]);
+else
+    h.fig   = gcf;
+    h.ax    = gca; 
+end
+set(findall(h.fig, '-property', 'units'), 'units', 'norm');
+set(h.ax, 'FontSize', fontsize); % base font size
+propfs      = round(get(h.ax, 'FontSize')*fontmultiplier1); % font size proportioned wrt to axis fontsize
+set(gca, 'xticklabel', []);
+
 % | Check Color Map
 % | ========================================================================
 if ischar(barcmap)
@@ -114,20 +129,8 @@ elseif isnumeric(barcmap)
     map = barcmap(1:nbar,:);
 end
 
-% | Grab or Make Figure
+% | Create the Pretty Patch of Bars with Lines, Labels, Tigers, Bears, etc.
 % | ========================================================================
-if newfig
-    h.fig   = figure('color','white');
-    h.ax    = gca;
-    set(h.ax, 'position', [.075 .125 .875 .825]);
-else
-    h.fig   = gcf;
-    h.ax    = gca; 
-end
-set(findall(h.fig, '-property', 'units'), 'units', 'norm');
-set(h.ax, 'FontSize', fontsize); % base font size
-propfs      = round(get(h.ax, 'FontSize')*fontmultiplier1); % font size proportioned wrt to axis fontsize
-set(gca, 'xticklabel', []); 
 h.patch     = zeros(ngroup, nbar); 
 h.error     = zeros(ngroup, nbar);
 h.cap       = zeros(ngroup, nbar);
@@ -292,7 +295,7 @@ end
 % ------------------------------ SUBFUNCTIONS ------------------------------
 %
 % ==========================================================================
-function argstruct = setargs(defaults, optargs)
+function argstruct = setargs(defaultargs, varargs)
 % SETARGS Name/value parsing and assignment of varargin with default values
 % 
 % This is a utility for setting the value of optional arguments to a
@@ -301,29 +304,41 @@ function argstruct = setargs(defaults, optargs)
 % argument is optional and should be a cell array of "name, custom value"
 % pairs for at least one of the optional arguments.
 % 
-%  USAGE: argstruct = setargs(defaults, args)  
+%   USAGE: argstruct = setargs(defaultargs, varargs)
 % __________________________________________________________________________
-%  OUTPUT
+% OUTPUT
 % 
-% 	argstruct: structure containing the final argument values
+% 	ARGSTRUCT
+%    structure containing the final argument values
 % __________________________________________________________________________
-%  INPUTS
+% INPUTS
 % 
-% 	defaults:  
-%       cell array of "name, default value" pairs for all optional arguments
+% 	DEFAULTARGS  
+%     cell array of "'Name', value" pairs for all variables with default
+%     values
 % 
-% 	optargs [optional]     
-%       cell array of "name, custom value" pairs for at least one of the
-%       optional arguments. this will typically be the "varargin" array. 
+% 	VARARGS [optional]     
+%     cell array of user-specified "'Name', value" pairs for one or more of
+%     the variables with default values. this will typically be the
+%     "varargin" cell array. for each pair, SETARGS determines if the
+%     specified variable name can be uniquely matched to one of the default
+%     variable names specified in DEFAULTARGS. matching uses STRNCMPI and
+%     thus is case-insensitive and open to partial name matches (e.g.,
+%     default variable name 'FontWeight' would be matched by 'fontweight',
+%     'Fontw', etc.). if a match is found, the user-specified value is then
+%     used in place of the default value. if no match is found or if
+%     multiple matches are found, SETARGS returns an error and displays in
+%     the command window information about the argument that caused the
+%     problem.
 % __________________________________________________________________________
-%  USAGE EXAMPLE (WITHIN FUNCTION)
+% USAGE EXAMPLE (TO BE USED AT TOP OF FUNCTION WITH VARARGIN)
 % 
-%     defaults    = {'arg1', 0, 'arg2', 'words', 'arg3', rand}; 
-%     argstruct   = setargs(defaults, varargin)
+%     defaultargs = {'arg1', 0, 'arg2', 'words', 'arg3', rand}; 
+%     argstruct   = setargs(defaultargs, varargin)
 %
 
 
-% ---------------------- Copyright (C) 2015 Bob Spunt ----------------------
+% ---------------------- Copyright (C) 2015 Bob Spunt -----------------------
 %	Created:  2015-03-11
 %	Email:    spunt@caltech.edu
 % 
@@ -337,28 +352,28 @@ function argstruct = setargs(defaults, optargs)
 %   General Public License for more details.
 %       You should have received a copy of the GNU General Public License
 %   along with this program.  If not, see: http://www.gnu.org/licenses/.
-% __________________________________________________________________________
+% 
 if nargin < 1, mfile_showhelp; return; end
-if nargin < 2, optargs = []; end
-defaults = reshape(defaults, 2, length(defaults)/2)'; 
-if ~isempty(optargs)
-    if mod(length(optargs), 2)
-        error('Optional inputs must be entered as Name, Value pairs, e.g., myfunction(''name'', value)'); 
+if nargin < 2, varargs = []; end
+defaultargs = reshape(defaultargs, 2, length(defaultargs)/2)'; 
+if ~isempty(varargs)
+    if mod(length(varargs), 2)
+        error('Optional inputs must be entered as "''Name'', Value" pairs, e.g., myfunction(''arg1'', val1, ''arg2'', val2)'); 
     end
-    arg = reshape(optargs, 2, length(optargs)/2)';
+    arg = reshape(varargs, 2, length(varargs)/2)';
     for i = 1:size(arg,1)
-       idx = strncmpi(defaults(:,1), arg{i,1}, length(arg{i,1}));
+       idx = strncmpi(defaultargs(:,1), arg{i,1}, length(arg{i,1}));
        if sum(idx) > 1
-           error(['Input "%s" matches multiple valid inputs:' repmat('  %s', 1, sum(idx))], arg{i,1}, defaults{idx, 1});
+           error(['Input "%s" matches multiple valid inputs:' repmat('  %s', 1, sum(idx))], arg{i,1}, defaultargs{idx, 1});
        elseif ~any(idx)
            error('Input "%s" does not match a valid input.', arg{i,1});
        else
-           defaults{idx,2} = arg{i,2};
-       end  
+           defaultargs{idx,2} = arg{i,2};
+       end
     end
 end
-for i = 1:size(defaults,1), assignin('caller', defaults{i,1}, defaults{i,2}); end
-if nargout>0, argstruct = cell2struct(defaults(:,2), defaults(:,1)); end
+for i = 1:size(defaultargs,1), assignin('caller', defaultargs{i,1}, defaultargs{i,2}); end
+if nargout>0, argstruct = cell2struct(defaultargs(:,2), defaultargs(:,1)); end
 end
 function mfile_showhelp(varargin)
 % MFILE_SHOWHELP
