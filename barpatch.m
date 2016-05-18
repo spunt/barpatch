@@ -140,7 +140,7 @@ if ngroup > 1
     gwidth  = repmat(nbar+.5, ngroup, 1); 
     xcenter(2:end,:) = xcenter(2:end,:) + repmat(cumsum(gwidth(2:end)), 1, nbar);
     tickcenter = xcenter(:,end) + .50 + .25;
-    gcenter     = sum(xcenter, 2)/2;
+    gcenter     = sum(xcenter(:,[1 end]), 2)/2;
     fcenter     = sum(gcenter)/ngroup; 
 else
     gcenter = sum(xcenter)/nbar;
@@ -195,7 +195,7 @@ h.xline  = line(get(h.ax, 'xlim'), [0 0]);
 set(h.xline, 'Color', get(h.ax, 'ycolor'), 'LineWidth', get(h.ax, 'linewidth'));
 set(h.ax, 'xcolor', get(gca, 'color')); 
 
-% | GROUP DIVING TICK MARK
+% | GROUP DIVIDING TICK MARK
 % | ========================================================================
 if and(ngroup>1, grouptick)
    tln = .025*range(get(h.ax, 'ylim'));
@@ -215,7 +215,7 @@ if ~isempty(groupname)
     alllim = [min(alllim(:)) max(alllim(:))];
     for g = 1:ngroup
         h.grouplabel(g) = text(0, alllim(1), groupname{g}, 'margin', 1, 'horizontalalign', 'center', 'FontSize', ceil(propfs*fontmultiplier1));
-        set(h.grouplabel(g), 'position', [gcenter(g,1) alllim(1)], 'verticalalign', 'top', 'tag', 'groupname');
+        set(h.grouplabel(g), 'position', [gcenter(g,1) alllim(1)], 'verticalalign', 'top', 'tag', 'groupname', 'horizontalalign', 'center');
     end
     ext = get(h.grouplabel(1), 'extent');
     ylim = get(h.ax, 'ylim');
