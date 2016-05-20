@@ -14,32 +14,32 @@ This function will create a grouped bar graph with error bars without using the 
 
 ## OPTIONAL INPUTS (VARARGIN)
 
-These are entered as `'name', value` argument pairs. Matching is not case-sensitive and partial name mathces are OK.
+These are entered as `'name', value` argument pairs. Matching is not case-sensitive and partial name matches are OK.
 
-| Name            | Description                                            |
-| -----------     | :----------------------------------------------------- |
-| figh            | handle for figure to plot in                           |
-| newfig          | flag to create and plot in a new figure                |
-| groupidx        | rows index columns of "data" to plot as a group        |
-| groupname       | labels for different groups of bars                    |
-| grouptick       | flag to place tickmark between groups on x-axis        |
-| groupspace      | controls spacing between groups of bars                |
-| barname         | labels for different bars within groups (in legend)    |
-| barcmap         | colormap for distinguishing bars within a group        |
-| barwidth,       | width of bars (>1 produces overlapping bars)           |
-| errlinewidth    | width of error bar lines                               |
-| detachlegend    | flag to plot legend in separate window (if applicable) |
-| t               | figure title                                           |
-| xl              | x-axis label                                           |
-| yl              | y-axis label                                           |
-| fontsize        | base font size                                         |
-| fontname        | name of font to use                                    |
-| fontunits       | font units of finished product                         |
-| ytickformat     | display formatting for yticklabels (e.g., '%.2f')      |
-| yticklength     | # of yticks (if empty, determined automatically)       |
-| fontmultiplier1 | multiplier for next largest size from basefontsize     |
-| fontmultiplier2 | multiplier for next largest size from basefontsize     |
-| fontmultiplier3 | multiplier for next largest size from basefontsize     |
+| Name            | Description                                         |
+| -----------     | :-------------------------------------------------- |
+| figh            | handle for figure to plot in                        |
+| newfig          | flag to create and plot in a new figure             |
+| groupidx        | rows index columns of "data" to plot as a group     |
+| groupname       | labels for different groups of bars                 |
+| grouptick       | flag to place tickmark between groups on x-axis     |
+| groupspace      | controls spacing between groups of bars             |
+| barname         | labels for different bars within groups (in legend) |
+| barcmap         | colormap for distinguishing bars within a group     |
+| barwidth,       | width of bars (>1 produces overlapping bars)        |
+| errlinewidth    | width of error bar lines                            |
+| detachlegend    | flag to plot legend in new figure (if applicable)   |
+| t               | figure title                                        |
+| xl              | x-axis label                                        |
+| yl              | y-axis label                                        |
+| fontsize        | base font size                                      |
+| fontname        | name of font to use                                 |
+| fontunits       | font units of finished product                      |
+| ytickformat     | display formatting for yticklabels (e.g., '%.2f')   |
+| yticklength     | # of yticks (if empty, determined automatically)    |
+| fontmultiplier1 | multiplier for next largest size from basefontsize  |
+| fontmultiplier2 | multiplier for next largest size from basefontsize  |
+| fontmultiplier3 | multiplier for next largest size from basefontsize  |
 
 ## USAGE EXAMPLE
 

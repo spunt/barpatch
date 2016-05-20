@@ -10,25 +10,38 @@ function h = barpatch(data, varargin)
 %  OUTPUT
 % 	h: handles to all graphics objects  
 % __________________________________________________________________________
-%  INPUTS
-%   data:           data matrix to plot; rows are cases, cols are variables  
-%   varargin:       optional arguments entered as "name,value" pairs:
-%                   NOTE: To see defaults, run barpatch without any arguments
-%       figh        - handle for figure to plot in
-%       groupidx    - rows index columns of "data" to plot as a group
-%       groupname   - labels for different groups of bars
-%       grouptick   - flag to place tickmark between groups on x-axis
-%       barname     - labels for different bars within groups (in legend)
-%       barcmap     - colormap for distinguishing bars within a group
-%       barwidth,   - width of bars (>1 produces overlapping bars)
-%       errlinewidth- width of error bar lines
-%       t           - figure title
-%       xl          - x-axis label
-%       yl          - y-axis label
-%       fontsize    - base font size
-%       fontname    - name of font to use
-%       ytickformat - display formatting for yticklabels (e.g., '%.2f')
-%       yticklength - # of yticks (if empty, determined automatically)
+%  INPUT
+%   data: data matrix to plot; rows are cases, cols are variables 
+% __________________________________________________________________________
+%  OPTIONAL INPUTS (VARARGIN)
+%   These are entered as `'name', value` argument pairs. Matching is not
+%   case-sensitive and partial name matches are OK. To see default values,
+%   run barpatch without any arguments.
+%
+%   | Name            | Description                                         |
+%   | -----------     | --------------------------------------------------- |
+%   | figh            | handle for figure to plot in                        |
+%   | newfig          | flag to create and plot in a new figure             |
+%   | groupidx        | rows index columns of "data" to plot as a group     |
+%   | groupname       | labels for different groups of bars                 |
+%   | grouptick       | flag to place tickmark between groups on x-axis     |
+%   | groupspace      | controls spacing between groups of bars             |
+%   | barname         | labels for different bars within groups (in legend) |
+%   | barcmap         | colormap for distinguishing bars within a group     |
+%   | barwidth,       | width of bars (>1 produces overlapping bars)        |
+%   | errlinewidth    | width of error bar lines                            |
+%   | detachlegend    | flag to plot legend in new figure (if applicable)   |
+%   | t               | figure title                                        |
+%   | xl              | x-axis label                                        |
+%   | yl              | y-axis label                                        |
+%   | fontsize        | base font size                                      |
+%   | fontname        | name of font to use                                 |
+%   | fontunits       | font units of finished product                      |
+%   | ytickformat     | display formatting for yticklabels (e.g., '%.2f')   |
+%   | yticklength     | # of yticks (if empty, determined automatically)    |
+%   | fontmultiplier1 | multiplier for next largest size from basefontsize  |
+%   | fontmultiplier2 | multiplier for next largest size from basefontsize  |
+%   | fontmultiplier3 | multiplier for next largest size from basefontsize  |  
 % 
 % __________________________________________________________________________
 % USAGE EXAMPLE
@@ -65,6 +78,7 @@ def = { ...
     'barname',          [],                 ...
     'barcmap',          'gray',             ...
     'barwidth',         .95,                ...
+    'detachlegend',     0,                  ...
     'errlinewidth',     1.5,                ...
     'xl',               [],                 ...
     'yl',               [],                 ...
@@ -170,6 +184,7 @@ for g = 1:ngroup
         h.cap(g,i) = line([xcenter(g,i)-.05 xcenter(g,i)+.05], [ycap ycap]); % horizontal cap
         set(h.error(g,i), 'color', get(h.ax, 'ycolor'), 'linewidth', errlinewidth);
         set(h.cap(g,i), 'color', get(h.ax, 'ycolor'), 'linewidth', errlinewidth);  
+        
 %         set(h.error(g,i), 'color', get(h.ax, 'ycolor'), 'linewidth', get(h.patch(g,i), 'linewidth'));
 %         set(h.cap(g,i), 'color', get(h.ax, 'ycolor'), 'linewidth', get(h.patch(g,i), 'linewidth'));  
         hold on
@@ -180,13 +195,41 @@ set(h.ax, 'units', 'normal');
 % | Make legend
 % | ========================================================================
 if ~isempty(barname)
-    h.leg = legend(h.patch(1,:), barname);
-    set(h.leg, ...
-        'Location', 'Best', ...
-        'FontWeight', 'normal', ...
-        'FontSize', ceil(propfs*fontmultiplier1), ...
-        'EdgeColor', get(gca, 'color'));
-    hold on
+    
+    if detachlegend
+    
+        h.leg   = figure('color','white', 'units', 'pix');
+        h.legax = gca;
+        w = .9*(1/nbar);
+        ybottom = ((1/nbar)-w)/2:(1/nbar):1;
+        ytop = ybottom + w;
+        xleft = ((1/nbar)-w)/2;
+        xright = xleft + w; 
+        ycoord = [ybottom' ybottom' ytop' ytop'];
+        xcoord = [xleft' xright' xright' xleft'];
+        for i = 1:length(barname)
+            p(i) = patch(xcoord, ycoord(i,:), map(i,:), 'linestyle', 'none', 'edgecolor', map(end,:)); 
+        end
+        set(h.legax, 'ylim', [0 1], 'xlim', [0 1]);
+        axis off; 
+        labx = (1/nbar) + xleft;
+        laby = ((1/nbar)/2):(1/nbar):1; 
+        for g = 1:nbar
+            h.leglabel(g) = text(labx, laby(g), barname{g}, 'margin', 1, 'horizontalalign', 'left',  'verticalalign', 'middle', 'FontSize', ceil(propfs*fontmultiplier1)); 
+        end
+        axes(h.ax);
+        
+    else
+        
+        h.leg = legend(h.patch(1,:), barname);
+        set(h.leg, ...
+            'Location', 'Best', ...
+            'FontWeight', 'normal', ...
+            'FontSize', ceil(propfs*fontmultiplier2), ...
+            'EdgeColor', get(gca, 'color'));
+        hold on
+        
+    end
 end
 
 % | LINE FOR X-AXIS (BASELINE)
