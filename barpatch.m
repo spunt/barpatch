@@ -77,6 +77,7 @@ def = { ...
     'groupspace'        0.5,                ...
     'barname',          [],                 ...
     'barcmap',          'gray',             ...
+    'mapminmax',        [.025 .975],          ...
     'barwidth',         .95,                ...
     'detachlegend',     0,                  ...
     'errlinewidth',     1.5,                ...
@@ -132,7 +133,7 @@ set(gca, 'xticklabel', []);
 % | Check Color Map
 % | ========================================================================
 if ischar(barcmap)
-    map     = quantile(colormap(barcmap), .1:.801/nbar:.90);
+    map     = quantile(colormap(barcmap), min(mapminmax):(range(mapminmax)+.01)/nbar:max(mapminmax));
 elseif isnumeric(barcmap)
     mapdim  = size(barcmap);
     if any([mapdim(1)<nbar mapdim(2)~=3])
@@ -143,6 +144,7 @@ elseif isnumeric(barcmap)
     end
     map = barcmap(1:nbar,:);
 end
+
 
 % | Create the Pretty Patch of Bars with Lines, Labels, Tigers, Bears, etc.
 % | ========================================================================
@@ -198,25 +200,35 @@ if ~isempty(barname)
     
     if detachlegend
     
-        h.leg   = figure('color','white', 'units', 'pix');
-        h.legax = gca;
-        w = .9*(1/nbar);
-        ybottom = ((1/nbar)-w)/2:(1/nbar):1;
-        ytop = ybottom + w;
-        xleft = ((1/nbar)-w)/2;
-        xright = xleft + w; 
-        ycoord = [ybottom' ybottom' ytop' ytop'];
-        xcoord = [xleft' xright' xright' xleft'];
-        for i = 1:length(barname)
-            p(i) = patch(xcoord, ycoord(i,:), map(i,:), 'linestyle', 'none', 'edgecolor', map(end,:)); 
-        end
-        set(h.legax, 'ylim', [0 1], 'xlim', [0 1]);
-        axis off; 
-        labx = (1/nbar) + xleft;
-        laby = ((1/nbar)/2):(1/nbar):1; 
-        for g = 1:nbar
-            h.leglabel(g) = text(labx, laby(g), barname{g}, 'margin', 1, 'horizontalalign', 'left',  'verticalalign', 'middle', 'FontSize', ceil(propfs*fontmultiplier1)); 
-        end
+        
+        h.legend = legendfree(barname, 'fontsize', ceil(propfs*fontmultiplier1), 'cmap', map); 
+%         set(h.ax, 'units', 'pix');
+%         refpos = get(h.ax, 'position');
+%         set(h.ax, 'units', 'norm');
+%         multiplier = 1/6;
+%         legh = (refpos(4)*multiplier)*nbar;
+%         legpos = [1 1 legh*2 legh]; 
+%         h.leg   = figure('color','white', 'units', 'pix', 'pos', legpos);
+%         h.legax = gca;
+%         w = .9*(1/nbar);
+%         ybottom = ((1/nbar)-w)/2:(1/nbar):1;
+%         ytop = ybottom + w;
+%         xleft = ((1/nbar)-w)/2;
+%         xright = xleft + w; 
+%         ycoord = [ybottom' ybottom' ytop' ytop'];
+%         xcoord = [xleft' xright' xright' xleft'];
+%         ycoord = sortrows(ycoord, -1); 
+%         for i = 1:length(barname)
+%             p(i) = patch(xcoord, ycoord(i,:), map(i,:), 'linestyle', 'none', 'edgecolor', map(end,:)); 
+%         end
+%         set(h.legax, 'ylim', [0 1], 'xlim', [0 2]);
+%         axis off; 
+%         labx = (1/nbar) + xleft;
+%         laby = ((1/nbar)/2):(1/nbar):1;
+%         laby = sort(laby, 2, 'descend'); 
+%         for g = 1:nbar
+%             h.leglabel(g) = text(labx, laby(g), barname{g}, 'margin', 1, 'horizontalalign', 'left',  'verticalalign', 'middle', 'FontSize', ceil(propfs*fontmultiplier1)); 
+%         end
         axes(h.ax);
         
     else
@@ -312,18 +324,18 @@ end
 
 % | FORMAT TICKLABELS
 % | ========================================================================
-if yticklength
-    ylim    = get(h.ax, 'ylim');
-    set(h.ax, 'ytick', linspace(ylim(1), ylim(2), yticklength));
-end
-if and(~isempty(ytickformat), ~isempty(get(h.ax, 'yticklabel')))
-    yt  = get(h.ax, 'ytick');
-    yts = cell(size(yt)); 
-    for i = 1:length(yt)
-       yts{i} = sprintf(ytickformat, yt(i));
-    end
-    set(h.ax, 'yticklabel', yts);
-end
+% if yticklength
+%     ylim    = get(h.ax, 'ylim');
+%     set(h.ax, 'ytick', linspace(ylim(1), ylim(2), yticklength));
+% end
+% if and(~isempty(ytickformat), ~isempty(get(h.ax, 'yticklabel')))
+%     yt  = get(h.ax, 'ytick');
+%     yts = cell(size(yt)); 
+%     for i = 1:length(yt)
+%        yts{i} = sprintf(ytickformat, yt(i));
+%     end
+%     set(h.ax, 'yticklabel', yts);
+% end
 
 
 % | FINAL CLEANUP, PROPERTY SETTING
@@ -423,4 +435,142 @@ function mfile_showhelp(varargin)
 ST = dbstack('-completenames');
 if isempty(ST), fprintf('\nYou must call this within a function\n\n'); return; end
 eval(sprintf('help %s', ST(2).file));  
+end
+function h = legendfree(labels, varargin)
+% LEGENDFREE
+% 
+
+% ---------------------- Copyright (C) 2014 Bob Spunt ----------------------
+% 	Created:  2015-03-09
+% 	Email:    spunt@caltech.edu
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or (at
+%   your option) any later version.
+%       This program is distributed in the hope that it will be useful, but
+%   WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+%   General Public License for more details.
+%       You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see: http://www.gnu.org/licenses/.
+% __________________________________________________________________________
+def = { ...
+    'titlestr',            '',                ...
+    'cmap',             'gray',             ...
+    'fontsize',         10,                ...
+    'fontname',         'Arial',            ...
+     };
+    
+% | Check Varargin
+% | ========================================================================
+vals = setargs(def, varargin);
+if nargin<1, mfile_showhelp; fprintf('\t| - VARARGIN DEFAULTS - |\n'); disp(vals); return; end
+
+% | Check Color Map
+% | ========================================================================
+nlabel = length(labels); 
+if ischar(cmap)
+    map     = quantile(colormap(cmap), .1:.801/nlabel:.90);
+elseif isnumeric(cmap)
+    mapdim  = size(cmap);
+    if any([mapdim(1)<nlabel mapdim(2)~=3])
+        error('You have specified an invalid cmap in input "cmap"');
+    end
+    if mapdim(1)>nlabel
+        fprintf('\n- WARNING: Using just the first %d rows of the input cmap - \n\n', nlabel);  
+    end
+    map = cmap(1:nlabel,:);
+end
+
+% | Estimate Size
+% | ========================================================================
+[strw,strh] = strsize(labels, 'fontsize', fontsize, 'fontname', fontname);
+ht          = (max(strh)*1.25)*nlabel;
+wd          = max(strw)*1.25 + (max(strh)*1.25);
+figrat      = wd/ht;
+
+% | DO IT
+% | ========================================================================
+h.legfig    = figure('color', 'white', 'ToolBar', 'none', 'menubar', 'none', 'units', 'pixel', 'pos', [10 10 wd ht]);
+set(h.legfig, 'units', 'norm');
+h.legax     = axes(h.legfig, 'units', 'norm', 'pos', [0.01 0.01 .98 .98]);
+w           = .9*(1/nlabel);
+ybottom     = ((1/nlabel)-w)/2:(1/nlabel):1;
+ytop        = ybottom + w;
+xleft       = ((1/nlabel)-w)/2;
+xright      = xleft + w;
+ycoord      = [ybottom' ybottom' ytop' ytop'];
+xcoord      = [xleft' xright' xright' xleft'];
+ycoord      = sortrows(ycoord, -1);
+for i = 1:length(labels)
+    h.patch(i) = patch(xcoord, ycoord(i,:), map(i,:), 'linestyle', 'none', 'edgecolor', map(end,:)); 
+end
+axis off; 
+set(h.legax, 'ylim', [0 1], 'xlim', [0 figrat], 'units', 'pixels');
+labx = (1/nlabel) + xleft;
+laby = ((1/nlabel)/2):(1/nlabel):1;
+laby = sort(laby, 2, 'descend'); 
+for g = 1:nlabel
+    h.leglabel(g) = text(labx, laby(g), labels{g}, 'margin', 1, 'horizontalalign', 'left',  'verticalalign', 'middle', 'FontSize', fontsize); 
+end
+    
+% | FINAL CLEANUP, PROPERTY SETTING
+% | ========================================================================
+set(findall(h.legfig, '-property', 'FontName'), 'FontName', fontname, 'FontUnits', 'norm');
+set(findall(h.legfig, '-property', 'units'), 'Units', 'pixels');
+
+if ~isempty(titlestr)
+    figpos  = get(h.legfig, 'pos');
+    tith    = max(strh)*1.5; 
+    figpos(4) = figpos(4) + tith; 
+    set(h.legfig, 'pos', figpos);
+    axpos = get(h.legax, 'pos');
+    h.title = text(axpos(1), sum(axpos([2 4])), titlestr, ...
+        'units', 'pixel',  ...
+        'margin', 1, ...
+        'horizontalalign', 'left',  ...
+        'verticalalign', 'bottom', ...
+        'fontweight', 'bold', ...
+        'fontname', fontname, ...
+        'FontSize', fontsize*1.1); 
+end
+
+end
+function [strw, strh] = strsize(string, varargin)
+    % STRSIZE Calculate size of string
+    %
+    %  USAGE: strsize(string, varargin) 
+    %
+
+    % ---------------------- Copyright (C) 2015 Bob Spunt ----------------------
+    %	Created:  2015-07-14
+    %	Email:     spunt@caltech.edu
+    % __________________________________________________________________________
+    def = { ... 
+        'FontSize',         get(0, 'DefaultTextFontSize'),      ...
+        'FontName',         get(0, 'DefaultTextFontname'),      ...
+        'FontWeight',       get(0, 'DefaultTextFontWeight'),    ...
+        'FontAngle',        get(0, 'DefaultTextFontAngle'),     ...
+        'FontUnits',        get(0, 'DefaultTextFontUnits')     ...
+    	};
+    vals = setargs(def, varargin);
+    if nargin==0, mfile_showhelp; fprintf('\t| - VARARGIN DEFAULTS - |\n'); disp(vals); return; end
+    if ischar(string), string = cellstr(string); end
+    nstr = length(string);
+    strw = zeros(nstr, 1); 
+    strh = zeros(nstr, 1); 
+    tmpfig  = figure('visible', 'off');
+    for i = 1:nstr
+        hTest   = text(1,1, string{i}, 'Units','Pixels', 'FontUnits',FontUnits,...
+            'FontAngle',FontAngle,'FontName',FontName,'FontSize',FontSize,...
+            'FontWeight',FontWeight,'Parent',gca, 'Visible', 'off');
+        textExt = get(hTest,'Extent');
+        strh(i)    = textExt(4);
+        strw(i)    = textExt(3);
+        delete(hTest); 
+    end
+    delete(tmpfig);
+    % | If using a proportional font, shrink text width by a fudge factor to account for kerning.
+    if ~strcmpi(FontName, 'Fixed-Width'), strw = strw*0.9; end 
 end
